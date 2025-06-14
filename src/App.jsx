@@ -1,7 +1,13 @@
-import { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { useEffect, useState, useRef, } from "react";
+import { motion, AnimatePresence, useScroll, useTransform,useInView } from "framer-motion";
 import { FaVideo, FaCamera, FaFeatherAlt, FaEnvelope, FaLinkedin, FaInstagram } from 'react-icons/fa';
-import "./App.css"; // Ensure you have a CSS file for global styles
+import "./App.css";
+import { storage } from './firebase.js';
+import { ref, getDownloadURL } from 'firebase/storage';
+import mainvid from '../src/assets/0525.mp4';
+import { g } from "framer-motion/client";
+
+
 // Add styles for glow effect
 const glowStyles = `
   @keyframes glow {
@@ -39,7 +45,7 @@ const greetings = [
 const projects = [
   {
     id: 1,
-    title: "Echoes of Movement",
+    title: "Property Videos",
     category: "Videography | Choreography",
     thumbnail: "https://placehold.co/600x400/8b5cf6/FFFFFF?text=Project+1", // Replace with your video/image
     description: "A captivating dance film exploring human connection through contemporary movement."
@@ -123,7 +129,107 @@ export default function App() {
   // State and refs for the Hero Section
   const [greetingIndex, setGreetingIndex] = useState(0);
   const [firstWordShown, setFirstWordShown] = useState(false);
+  const [videoUrl, setVideoUrl] = useState('');
   const videoRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentSection, setCurrentSection] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const { scrollY } = useScroll();
+  const aboutRef = useRef(null);
+  const servicesRef = useRef(null);
+  const contactRef = useRef(null);
+    const portraitRef = useRef(null); // <-- Add this line
+  
+  const isAboutInView = useInView(aboutRef, { amount: 0.2 });
+  const isServicesInView = useInView(servicesRef, { amount: 0.2 });
+  const isContactInView = useInView(contactRef, { amount: 0.2 });
+
+  const sections = [
+    'hero',
+    'about',
+    'gallery',
+    'contact'
+  ];
+
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
+
+  const heroVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 2,
+        ease: [0.25, 0.1, 0.25, 1]
+      }
+    }
+  };
+
+  const textVariants = {
+    hidden: { y: 100, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 1.2,
+        ease: [0.25, 0.1, 0.25, 1]
+      }
+    }
+  };
+
+  const imageVariants = {
+    hidden: { scale: 1.2, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: {
+        duration: 1.5,
+        ease: [0.25, 0.1, 0.25, 1]
+      }
+    },
+    hover: {
+      scale: 1.05,
+      transition: {
+        duration: 0.6,
+        ease: [0.25, 0.1, 0.25, 1]
+      }
+    }
+  };
+
+  const galleryImages = [
+    { src: 'https://images.unsplash.com/photo-1606800052052-a08af7148866?w=800&h=1000&fit=crop', alt: 'Architecture' },
+    { src: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&h=800&fit=crop', alt: 'Wedding' },
+    { src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', alt: 'Landscape' },
+    { src: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&h=900&fit=crop', alt: 'Portrait' },
+    { src: 'https://images.unsplash.com/photo-1464822759844-d150baec53c1?w=800&h=600&fit=crop', alt: 'Mountain' },
+    { src: 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=700&h=900&fit=crop', alt: 'Street' }
+  ];
+
+  const parallaxY = useTransform(scrollY, [0, 500], [0, -150]);
+
+  useEffect(() => {
+    const loadVideo = async () => {
+      try {
+        setIsLoading(true);
+        const videoRef = ref(storage, 'Videos/0525.mp4');
+        console.log('Loading video from:', videoRef);
+        
+        const url = await getDownloadURL(videoRef);
+        console.log('Video URL obtained:', url);
+        
+        setVideoUrl(url);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error loading video:', err);
+        setError(err.message);
+        setIsLoading(false);
+      }
+    };
+
+    loadVideo();
+  }, []);
 
   useEffect(() => {
     const firstWordTimer = setTimeout(() => {
@@ -165,15 +271,18 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black text-white relative overflow-x-hidden font-sans">
       {/* Hero Section - DO NOT CHANGE THIS PART */}
-      <div className="h-screen w-screen bg-black text-white flex flex-col justify-center items-center relative">
+      <div className="h-screen w-full bg-black text-white flex flex-col justify-center items-center relative px-4 sm:px-0">
 
-        <motion.div className="absolute top-4 left-4 text-2xl font-bold cursor-pointer"
-          whileHover={{ scale: 1.1, color: "#8b5cf6" }}
-          transition={{ duration: 0.2 }}
-        >MOTION.SAURABH</motion.div>
-        <motion.div className="absolute top-4 right-4 text-sm cursor-pointer"
-          whileHover={{ scale: 1.1, color: "#8b5cf6" }}
-          transition={{ duration: 0.2 }}>Labs ↗</motion.div>
+        {/* Navigation */}
+  <motion.div className="absolute top-4 left-4 text-xl sm:text-2xl font-bold cursor-pointer"
+    whileHover={{ scale: 1.1, color: "#8b5cf6" }}
+    transition={{ duration: 0.2 }}
+  >Saurabh.Verse</motion.div>
+
+          <motion.div className="absolute top-4 right-4 text-xs sm:text-sm cursor-pointer"
+    whileHover={{ scale: 1.1, color: "#8b5cf6" }}
+    transition={{ duration: 0.2 }}>Labs ↗</motion.div>
+  
         <motion.div className="absolute top-4 flex gap-8 text-sm justify-center">
           <motion.span className="cursor-pointer"
             whileHover={{ scale: 1.1, color: "#8b5cf6" }}
@@ -187,13 +296,31 @@ export default function App() {
         </motion.div>
 
         {/* Video Container with Rounded Frame */}
-        <div className="relative w-[1500px] h-[650px] bg-gray-900 rounded-3xl overflow-hidden z-10 glow-effect">
+        <div className="relative w-[1350px] h-[570px] bg-gray-900 rounded-3xl overflow-hidden z-10 glow-effect">
           {/* Add the glow container */}
           <div className="absolute inset-0 -z-10 animate-glow">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-200 via-blue-200 to-purple-100 opacity-30 blur-2xl transform scale-110"></div>
           </div>
+          {isLoading && <div className="absolute inset-0 flex items-center justify-center text-white">Loading...</div>}
+      {error && <div className="absolute inset-0 flex items-center justify-center text-red-500">{error}</div>}
+      {videoUrl && (
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover background-video"
+          autoPlay
+          loop
+          muted
+          playsInline
+          onError={(e) => console.error('Video error:', e)}
+          onLoadStart={() => console.log('Video loading started')}
+          onLoadedData={() => console.log('Video loaded successfully')}
+        >
+          <source src={videoUrl} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      )}
           {/* Video with ref */}
-          <video
+          {/* <video
             ref={videoRef}
             className="w-full h-full object-cover background-video"
             autoPlay
@@ -205,13 +332,15 @@ export default function App() {
             onLoadedData={() => console.log('Video loaded successfully')}
           >
             {/* Try multiple source paths */}
-            <source src="/assets/0525.mp4" type="video/mp4" />
+            {/* <source src={mainvid} type="video/mp4" /> */}
+            {/* <source src="/assets/0525.mp4" type="video/mp4" />
             <source src="./assets/0525.mp4" type="video/mp4" />
-            <source src="/src/assets/0525.mp4" type="video/mp4" />
+            <source src="/src/assets/0525.mp4" type="video/mp4" /> */}
             {/* If you import the video, uncomment this line: */}
             {/* <source src={mainvid} type="video/mp4" /> */}
-            Your browser does not support the video tag.
-          </video>
+            {/* Your browser does not support the video tag. */}
+          {/* </video> */}
+
 
 
           <div className="absolute inset-0 flex items-center justify-center">
@@ -250,252 +379,310 @@ export default function App() {
           SCROLL TO EXPLORE
         </motion.p>
       </div>
-{/* --- Project Showcase Section --- */}
-<section id="projects" className="py-32 bg-black min-h-screen flex items-center justify-center relative overflow-hidden">
-  {/* Cinematic background elements */}
-  <div className="absolute inset-0 z-0 opacity-10 pointer-events-none">
-    <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-purple-900 to-transparent"></div>
-    <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-blue-900 to-transparent"></div>
-    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
-  </div>
-
-  {/* Floating light effects */}
-  <motion.div 
-    className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-purple-900 blur-3xl opacity-20"
-    animate={{
-      scale: [1, 1.2, 1],
-      opacity: [0.2, 0.3, 0.2]
-    }}
-    transition={{
-      duration: 8,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }}
-  />
-  <motion.div 
-    className="absolute bottom-1/3 right-1/4 w-96 h-96 rounded-full bg-blue-900 blur-3xl opacity-15"
-    animate={{
-      scale: [1, 1.3, 1],
-      opacity: [0.15, 0.25, 0.15]
-    }}
-    transition={{
-      duration: 10,
-      repeat: Infinity,
-      ease: "easeInOut",
-      delay: 2
-    }}
-  />
-
-  <div className="container mx-auto px-4 py-16 relative z-10">
-    {/* Cinematic title sequence */}
-    <motion.div 
-      className="text-center mb-32"
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true, amount: 0.5 }}
-      transition={{ duration: 2 }}
-    >
-      <motion.p
-        className="text-sm uppercase tracking-[0.5em] text-gray-500 mb-6"
-        initial={{ y: 20, opacity: 0 }}
-        whileInView={{ y: 0, opacity: 1 }}
-        transition={{ duration: 1, delay: 0.3 }}
-      >
-        Selected Works
-      </motion.p>
-      <motion.h2
-        className="text-8xl font-normal text-white mb-6 tracking-tight font-serif"
-        initial={{ y: 40, opacity: 0 }}
-        whileInView={{ y: 0, opacity: 1 }}
-        transition={{ 
-          duration: 1.5, 
-          delay: 0.6,
-          ease: [0.16, 1, 0.3, 1]
-        }}
-      >
-        <span className="block text-5xl font-light mb-4 text-gray-400">Volume I</span>
-        
-      </motion.h2>
-      <motion.div
-        className="w-32 h-px bg-gray-700 mx-auto mt-12"
-        initial={{ scaleX: 0 }}
-        whileInView={{ scaleX: 1 }}
-        transition={{ duration: 1.5, delay: 1.2 }}
-      />
-    </motion.div>
-
-    {/* Projects grid - cinematic reveal */}
-    <div className="grid md:grid-cols-2 gap-24">
-      {projects.map((project, index) => (
-        <motion.div
-          key={project.id}
-          className="relative group"
-          initial={{ opacity: 0, y: 100 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.1 }}
-          transition={{ 
-            duration: 1.5, 
-            delay: index * 0.2,
-            ease: [0.16, 1, 0.3, 1]
-          }}
-        >
-          {/* Project number - classic film counter style */}
-          <motion.span 
-            className="absolute -left-16 top-0 text-7xl font-bold text-gray-800 opacity-30 font-mono"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 0.3 }}
-            transition={{ delay: index * 0.2 + 0.4 }}
+<div className="bg-black text-white overflow-hidden">
+      {/* Navigation and Logo - Only visible when About section in view */}
+      {isAboutInView && (
+        <>
+          <motion.nav 
+            initial={{ y: -100 }}
+            animate={{ y: 0 }}
+            transition={{ duration: 1, delay: 0.5 }}
+            className="fixed top-0 right-0 z-50 p-8"
           >
-            {String(index + 1).padStart(2, '0')}
-          </motion.span>
-          
-          {/* Project image with parallax hover effect */}
-          <motion.div 
-            className="relative overflow-hidden rounded-sm"
-            whileHover="hover"
-            initial={{ scale: 0.98 }}
-            whileInView={{ scale: 1 }}
-            transition={{ duration: 1.5 }}
-          >
-            <motion.div
-              className="absolute inset-0 z-10 bg-gradient-to-t from-black via-transparent to-transparent opacity-80"
-              variants={{
-                hover: { opacity: 0.6 }
-              }}
-            />
-            <motion.img
-              src={project.thumbnail}
-              alt={project.title}
-              className="w-full h-[28rem] object-cover"
-              variants={{
-                hover: { scale: 1.05 }
-              }}
-              transition={{ duration: 1.2 }}
-            />
-            <motion.div
-              className="absolute inset-0 border border-white border-opacity-5 group-hover:border-opacity-20 transition-all duration-1000"
-              variants={{
-                hover: { borderWidth: '2px' }
-              }}
-            />
-          </motion.div>
-          
-          {/* Project info - classic film title reveal */}
-          <motion.div 
-            className="mt-8 pl-8 relative"
-            initial={{ opacity: 0, x: -40 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.2 + 0.6 }}
-          >
-            <div className="absolute left-0 top-2 w-0.5 h-16 bg-gradient-to-b from-purple-500 to-blue-500"></div>
-            <h3 className="text-4xl font-light text-white mb-2 tracking-tight font-serif">
-              {project.title.split(' ').map((word, i) => (
-                <motion.span
-                  key={i}
-                  className="inline-block"
-                  initial={{ y: 20, opacity: 0 }}
-                  whileInView={{ y: 0, opacity: 1 }}
-                  transition={{ delay: index * 0.2 + 0.7 + i * 0.05 }}
+            <div className="flex flex-col gap-4 text-right">
+              {['Home', 'Service', 'About', 'Product'].map((item, index) => (
+                <motion.div
+                  key={item}
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.8 + index * 0.1 }}
+                  className="text-gray-400 hover:text-white cursor-pointer transition-colors duration-300"
                 >
-                  {word}&nbsp;
-                </motion.span>
+                  {item}
+                </motion.div>
               ))}
-            </h3>
-            <motion.p 
-              className="text-gray-400 uppercase text-xs tracking-widest mb-4"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ delay: index * 0.2 + 0.9 }}
-            >
-              {project.category}
-            </motion.p>
-            <motion.p 
-              className="text-gray-300 font-light leading-relaxed mb-6 max-w-md"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ delay: index * 0.2 + 1.0 }}
-            >
-              {project.description}
-            </motion.p>
-            <motion.a
-              href="#"
-              className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors duration-500 group"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ delay: index * 0.2 + 1.1 }}
-            >
-              <span className="block w-8 h-px bg-gray-400 transition-all duration-500 group-hover:w-12 group-hover:bg-purple-400"></span>
-              View Case Study
-            </motion.a>
+            </div>
+          </motion.nav>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1 }}
+            className="fixed top-8 left-8 z-50"
+          >
+            <div className="w-12 h-12 border-2 border-white flex items-center justify-center text-xl font-bold">
+              M
+            </div>
           </motion.div>
-        </motion.div>
-      ))}
-    </div>
-
-    {/* Cinematic divider with animated scan lines */}
-    <motion.div 
-      className="relative my-40"
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      transition={{ delay: 0.8 }}
-    >
-      <div className="w-full h-px bg-gray-800"></div>
-      <motion.div 
-        className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white to-transparent"
-        animate={{
-          x: ['-100%', '100%']
-        }}
-        transition={{
-          duration: 3,
-          repeat: Infinity,
-          ease: "linear"
-        }}
-      />
-    </motion.div>
-
-    {/* Call to action - film credit style */}
-    <motion.div
-      className="text-center"
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      transition={{ delay: 1.0 }}
-    >
-      <motion.p 
-        className="text-gray-500 mb-8 tracking-widest text-sm"
-        animate={{
-          opacity: [0.5, 1, 0.5]
-        }}
-        transition={{
-          duration: 4,
-          repeat: Infinity
-        }}
+</>
+      )}
+   
+      {/* About Section */}
+      <motion.section 
+      ref={aboutRef}
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+        viewport={{ once: true }}
+        className="min-h-screen bg-gray-50 text-black py-20"
       >
-        MORE STORIES TO UNFOLD
-      </motion.p>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2 }}
-      >
-        <motion.a
-          href="#"
-          className="inline-block px-12 py-5 border border-gray-800 text-white text-lg tracking-wider hover:border-purple-500 hover:text-purple-300 transition-all duration-700 relative overflow-hidden group"
-          whileHover={{
-            backgroundColor: 'rgba(139, 92, 246, 0.05)'
-          }}
-        >
-          <span className="relative z-10">Explore Full Archive</span>
-          <motion.span
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-900/30 to-transparent opacity-0 group-hover:opacity-100"
-            initial={{ x: '-100%' }}
-            whileHover={{ x: '100%' }}
+        <div className="max-w-7xl mx-auto px-8">
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
             transition={{ duration: 1.2 }}
-          />
-        </motion.a>
-      </motion.div>
-    </motion.div>
-  </div>
-</section>
+            viewport={{ once: true }}
+            className="mb-16"
+          >
+            <div className="text-sm text-gray-500 mb-4">01</div>
+            <div className="text-sm text-gray-500 mb-8">
+              CHERISH YOUR SPECIAL DAY<br />
+              WITH STUNNING,
+            </div>
+            <h2 className="text-6xl lg:text-7xl font-light leading-tight mb-12">
+              I Specialize In<br />
+              Transforming Fleeting<br />
+              Moments Into Timeless Memories.<br />
+              Whether It's A Wedding, Family<br />
+              Portrait, Or A Personal Milestone
+            </h2>
+          </motion.div>
+
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            transition={{ duration: 1, delay: 0.3 }}
+            viewport={{ once: true }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start"
+          >
+            <div>
+              <h3 className="text-2xl font-medium mb-6">My Goal Is To Make Every Session Enjoyable</h3>
+              <p className="text-gray-600 mb-8">
+                a passionate photographer with 10 years of experience in capturing life's most precious 
+                moments. My journey began [brief personal story or inspiration].
+              </p>
+
+              <div className="mb-12">
+                <h3 className="text-2xl font-medium mb-6">Let My Lens Capture The Beauty Of Your Moments.</h3>
+                <p className="text-gray-600">
+                  Explore my gallery to see a collection of my favorite works. From weddings and 
+                  engagements to portraits and events, each photo tells a unique story.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+                className="relative overflow-hidden rounded-lg"
+              >
+                <img 
+                  src="https://images.unsplash.com/photo-1583394838876-c4b6757b9f20?w=600&h=400&fit=crop"
+                  alt="Photography work"
+                  className="w-full h-64 object-cover"
+                />
+                <div className="absolute top-4 right-4 text-white text-sm">(First)</div>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+                className="relative overflow-hidden rounded-lg"
+              >
+                <img 
+                  src="https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=600&h=400&fit=crop"
+                  alt="Photography work"
+                  className="w-full h-64 object-cover"
+                />
+                <div className="absolute top-4 right-4 text-white text-sm">(Prad)</div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* Gallery Section */}
+      <motion.section 
+            ref={servicesRef}
+
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+        viewport={{ once: true }}
+        className="py-20 bg-gray-50 text-black"
+      >
+        <div className="max-w-7xl mx-auto px-8">
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            transition={{ duration: 1 }}
+            viewport={{ once: true }}
+            className="mb-16"
+          >
+            <div className="flex justify-between items-start mb-8">
+              <div>
+                <h2 className="text-sm font-medium mb-2">Bringing The</h2>
+              </div>
+              <div className="text-sm text-gray-500">1/15</div>
+            </div>
+          </motion.div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            {galleryImages.map((image, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: index * 0.1 }}
+                whileHover="hover"
+                variants={imageVariants}
+                viewport={{ once: true }}
+                className="relative overflow-hidden rounded-lg cursor-pointer group"
+              >
+                <img 
+                  src={image.src}
+                  alt={image.alt}
+                  className="w-full h-64 lg:h-80 object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  whileHover={{ opacity: 1 }}
+                  className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    whileHover={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className="text-white text-center"
+                  >
+                    <div className="text-2xl font-light mb-2">Let My Lens</div>
+                    <div className="text-2xl font-light">Capture</div>
+                    <div className="text-xs mt-4 opacity-80">
+                      CHERISH YOUR SPECIAL DAY<br />
+                      WITH STUNNING,
+                    </div>
+                  </motion.div>
+                </motion.div>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            transition={{ duration: 1 }}
+            viewport={{ once: true }}
+            className="text-center"
+          >
+            <div className="flex justify-between items-end">
+              <div className="text-left">
+                <div className="text-sm font-medium mb-2">Bringing The</div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="text-sm border-b border-black pb-1"
+                >
+                  See All
+                </motion.button>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-light mb-2">Let My Lens</div>
+                <div className="text-2xl font-light mb-4">Capture</div>
+                <div className="text-xs text-gray-500">
+                  CHERISH YOUR SPECIAL DAY<br />
+                  WITH STUNNING,
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* Contact Section */}
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+        viewport={{ once: true }}
+        className="py-20 bg-gray-50 text-black"
+      >
+        <div className="max-w-7xl mx-auto px-8">
+          <motion.div
+          ref={contactRef}
+            initial={{ y: 100, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            transition={{ duration: 1.2 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <div className="text-sm text-gray-500 mb-4">(Prad)</div>
+            <h2 className="text-6xl lg:text-8xl font-light mb-8">
+              Candid Shots<br />
+              That Capture<br />
+              The Best Part<br />
+              And Joy
+            </h2>
+            
+            <motion.div
+              initial={{ scale: 0 }}
+              whileInView={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 100, delay: 0.5 }}
+              viewport={{ once: true }}
+              className="inline-block"
+            >
+              <svg width="60" height="60" viewBox="0 0 60 60" className="transform rotate-12">
+                <path d="M30 5L35 25L55 30L35 35L30 55L25 35L5 30L25 25Z" fill="black"/>
+              </svg>
+            </motion.div>
+          </motion.div>
+
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            transition={{ duration: 1, delay: 0.3 }}
+            viewport={{ once: true }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-16"
+          >
+            <div>
+              <h3 className="text-sm font-medium mb-8">Have Something<br />Unique In Mind?</h3>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="relative overflow-hidden rounded-lg mb-8"
+              >
+                <img 
+                  src="https://images.unsplash.com/photo-1554048612-b6a482b224ca?w=600&h=400&fit=crop"
+                  alt="Contact"
+                  className="w-full h-64 object-cover"
+                />
+              </motion.div>
+            </div>
+
+            <div className="space-y-8">
+              <div>
+                <div className="text-xs text-gray-500 mb-4">
+                  CHERISH YOUR SPECIAL DAY<br />
+                  WITH STUNNING,
+                </div>
+                
+                <div className="space-y-6 text-right">
+                  <p>
+                    Explore my gallery to see a collection of my favorite works. 
+                    From weddings and engagements to portraits and events, each photo 
+                    tells a unique story.
+                  </p>
+                  
+                  <p className="font-medium">
+                    Let my lens capture the beauty of your moments.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </motion.section>
+    </div>
+  );
 {/* --- About Section - Cinematic Portrait --- */}
 <section id="about" className="py-40 bg-black min-h-screen flex items-center relative overflow-hidden">
   {/* Film grain overlay */}
@@ -518,6 +705,7 @@ export default function App() {
   <div className="container mx-auto px-4 flex flex-col lg:flex-row items-center gap-24 relative z-10">
     {/* Portrait with film reel effect */}
     <motion.div 
+    ref={portraitRef}
       className="relative lg:w-1/2"
       initial={{ opacity: 0, x: -100 }}
       whileInView={{ opacity: 1, x: 0 }}
@@ -627,6 +815,7 @@ export default function App() {
 <section id="services" className="py-40 bg-gradient-to-br from-black to-gray-950 min-h-screen flex items-center relative overflow-hidden">
   {/* Moving light effect */}
   <motion.div 
+  ref={servicesRef}
     className="absolute top-0 left-0 w-full h-full pointer-events-none"
     initial={{ opacity: 0 }}
     whileInView={{ opacity: 0.3 }}
@@ -936,6 +1125,7 @@ export default function App() {
 
     {/* Contact form - Film submission style */}
     <motion.div
+    ref={contactRef}
       className="max-w-2xl mx-auto bg-gradient-to-b from-gray-900 to-black p-12 border border-gray-800 rounded-lg"
       initial={{ opacity: 0, y: 50 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -1069,4 +1259,5 @@ export default function App() {
 </section>
     </div>
   );
+
 }
